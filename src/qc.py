@@ -104,12 +104,15 @@ def check_orientation(
     )
 
 
-def check_face_size(image_rgb: np.ndarray, geometry: FaceGeometry) -> CheckResult:
+def check_face_size(
+    image_rgb: np.ndarray, geometry: FaceGeometry, thresholds: QCThresholds | None = None
+) -> CheckResult:
     """The face has to fill enough of the frame for the edits to be meaningful."""
+    thresholds = thresholds or QCThresholds()
     height, width = image_rgb.shape[:2]
     _, _, w, h = geometry.bbox
     coverage = float(w * h) / float(max(1, width * height))
-    passed = coverage >= 0.04
+    passed = coverage >= thresholds.face_coverage_min
     return CheckResult(
         name="Face size",
         status="pass" if passed else "fail",
@@ -142,7 +145,7 @@ def run_qc(image_rgb: np.ndarray, settings: Settings | None = None) -> QCReport:
             status="pass",
             detail=f"One face located by the {geometry.detector} detector.",
         ),
-        check_face_size(image_rgb, geometry),
+        check_face_size(image_rgb, geometry, thresholds),
         check_blur(image_rgb, thresholds),
         check_lighting(image_rgb, thresholds),
         check_orientation(geometry, thresholds),

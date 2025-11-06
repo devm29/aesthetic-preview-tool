@@ -45,6 +45,7 @@ def _env_bool(name: str, default: bool) -> bool:
 class QCThresholds:
     """Acceptance thresholds for the upload quality checks."""
 
+    face_coverage_min: float = 0.04
     blur_target_width: int = 512
     blur_variance_min: float = 100.0
     lighting_mean_min: float = 90.0

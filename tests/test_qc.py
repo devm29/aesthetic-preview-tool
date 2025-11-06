@@ -118,6 +118,14 @@ def test_check_face_size_fails_for_a_distant_face():
     assert qc.check_face_size(image, large).unit == "% of frame"
 
 
+def test_face_size_threshold_comes_from_the_settings():
+    image = np.zeros((100, 100, 3), np.uint8)
+    face = make_geometry(100, 100, with_landmarks=False)
+    strict = QCThresholds(face_coverage_min=0.99)
+    assert qc.check_face_size(image, face).status == "pass"
+    assert qc.check_face_size(image, face, strict).status == "fail"
+
+
 def test_run_qc_reports_a_single_failing_check_when_no_face_is_found(settings):
     report = qc.run_qc(np.zeros((256, 256, 3), np.uint8), settings)
     assert report.face_present is False
