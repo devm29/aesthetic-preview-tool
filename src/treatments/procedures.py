@@ -135,8 +135,8 @@ class LipVolume(_GenerativeCapable):
         x0, y0 = min_xy - pad
         x1, y1 = max_xy + pad
         mid_x, mid_y = (x0 + x1) / 2, (y0 + y1) / 2
-        # Anchors pin the surrounding skin so the warp stays local.
-        # fmt: off  (laid out as the 3x3 grid it represents)
+        # The eight edge points of a 3x3 grid round the mouth pin the surrounding
+        # skin, so the warp stays local.
         anchors = np.array(
             [
                 [x0, y0],
@@ -150,7 +150,6 @@ class LipVolume(_GenerativeCapable):
             ],
             np.float32,
         )
-        # fmt: on
         warped = piecewise_warp(
             image_rgb,
             np.vstack([points, anchors]),
@@ -192,8 +191,8 @@ class UnderEyeSoftening(_GenerativeCapable):
     def _reference_chroma(image_rgb: np.ndarray, context: TreatmentContext, mask: np.ndarray):
         """Median a/b of the face skin *outside* the under-eye region.
 
-        Shifting the chroma by a fixed amount (the original "+18 on b") pushes
-        pale or cool skin straight past neutral into a green-yellow cast. Pulling
+        Shifting the chroma by a fixed amount pushes pale or cool skin straight
+        past neutral into a green-yellow cast. Pulling
         towards the surrounding skin's own chroma is both what the treatment
         claims to do and impossible to overshoot.
         """

@@ -29,10 +29,6 @@ ignore = [
     "B904",
 ]
 
-[tool.ruff.lint.per-file-ignores]
-# Tests reach into module internals (the detector registry) on purpose.
-"tests/*" = ["SLF001"]
-
 [tool.ruff.lint.isort]
 known-first-party = ["src", "tools"]
 
