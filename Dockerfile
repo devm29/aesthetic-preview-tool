@@ -13,11 +13,16 @@ FROM python:3.12-slim AS builder
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
 
+# The anthropic SDK is small, but optional: without it the consultation notes
+# come from the offline template, which is the default.
+ARG WITH_NARRATOR=false
+
 WORKDIR /build
-COPY requirements.txt ./
+COPY requirements.txt requirements-narrator.txt ./
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r requirements.txt
+    && /opt/venv/bin/pip install -r requirements.txt \
+    && if [ "$WITH_NARRATOR" = "true" ]; then /opt/venv/bin/pip install -r requirements-narrator.txt; fi
 
 # -------------------------------------------------------------- runtime stage
 FROM python:3.12-slim AS runtime

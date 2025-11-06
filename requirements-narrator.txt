@@ -1,0 +1,6 @@
+# Optional: Claude-written consultation notes.
+#
+# Without this package, or without ANTHROPIC_API_KEY, the app writes the notes
+# from a fixed template instead. The Docker image installs it when built with
+# DERMA_WITH_NARRATOR=true (see docker-compose.yml).
+anthropic>=2.6,<3

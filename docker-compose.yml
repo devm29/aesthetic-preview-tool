@@ -11,6 +11,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # true also installs requirements-narrator.txt, so ANTHROPIC_API_KEY below
+        # is actually used for the consultation notes.
+        WITH_NARRATOR: "${DERMA_WITH_NARRATOR:-false}"
     image: derma-scan:local
     container_name: derma-scan
     ports:
@@ -26,7 +30,8 @@ services:
       # not ship. Leaving it false keeps the UI honest about what is available.
       DERMA_ENABLE_GENERATIVE: "false"
       DERMA_LOG_LEVEL: "INFO"
-      # Consultation notes fall back to a fixed template when this is unset.
+      # Consultation notes fall back to a fixed template when this is unset or
+      # the image was built without DERMA_WITH_NARRATOR=true.
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
