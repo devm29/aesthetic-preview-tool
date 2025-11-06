@@ -1,0 +1,6 @@
+# Core runtime. CPU-only, no ML frameworks, no model downloads.
+streamlit>=1.49,<2
+numpy>=1.26,<3
+opencv-python-headless>=4.9,<5
+Pillow>=10.3,<12
+scikit-image>=0.22,<0.26

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+
+# Streamlit (the committed theme in .streamlit/config.toml is intentional)
+.streamlit/secrets.toml
+
+# Editors
+.vscode/
+.idea/
+
+# Data/outputs
+outputs/
+.cache/
+
+# Env
+.env
+
+# Virtual environments
+project_venv/
+.venv/
+
+# Test and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Model weights and large artifacts
+models/
+checkpoints/
+*.pt
+*.pth
+*.safetensors

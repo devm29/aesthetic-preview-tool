@@ -1,0 +1,6 @@
+# Development and CI tooling.
+-r requirements.txt
+pytest>=8.2,<10
+pytest-cov>=5.0,<8
+ruff>=0.6,<0.15
+playwright>=1.45,<2
