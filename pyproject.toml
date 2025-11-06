@@ -1,0 +1,48 @@
+[project]
+name = "derma-scan"
+version = "0.2.0"
+description = "Local, CPU-only aesthetic-preview proof of concept. Not a medical device."
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["."]
+exclude = [".venv", "project_venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # import ordering
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "C4",   # comprehensions
+    "SIM",  # simplification
+    "RUF",  # ruff-specific
+]
+ignore = [
+    # The pipeline deliberately swallows per-treatment failures so one bad
+    # treatment cannot take the whole preview down; each site logs and notes it.
+    "B904",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests reach into module internals (the detector registry) on purpose.
+"tests/*" = ["SLF001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "tools"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning:google._upb._message",
+]
