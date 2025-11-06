@@ -16,7 +16,13 @@ from src.config import DISCLAIMER, get_settings
 from src.detection import available_detectors
 from src.generative import build_editor
 from src.identity import EXPLANATION as IDENTITY_EXPLANATION
-from src.imaging import ImageTooLargeError, encode_png, image_fingerprint, wipe_composite
+from src.imaging import (
+    ImageTooLargeError,
+    UnreadableImageError,
+    encode_png,
+    image_fingerprint,
+    wipe_composite,
+)
 from src.masks import skin_mask
 from src.models import QCReport, TreatmentContext
 from src.narrative import narrator_available, summarise
@@ -171,7 +177,7 @@ def _load_source() -> bytes:
 
 try:
     image = cached_image(_load_source())
-except ImageTooLargeError as exc:
+except (ImageTooLargeError, UnreadableImageError) as exc:
     st.error(str(exc))
     st.stop()
 

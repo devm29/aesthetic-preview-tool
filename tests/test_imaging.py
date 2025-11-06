@@ -8,6 +8,7 @@ import pytest
 
 from src.imaging import (
     ImageTooLargeError,
+    UnreadableImageError,
     blend,
     crop,
     decode_image,
@@ -35,6 +36,25 @@ def test_decode_image_rejects_oversized_payload():
     payload = encode_png(np.zeros((64, 64, 3), np.uint8))
     with pytest.raises(ImageTooLargeError):
         decode_image(payload, max_bytes=8)
+
+
+def test_decode_image_turns_non_image_bytes_into_a_readable_error():
+    with pytest.raises(UnreadableImageError, match="JPEG or PNG"):
+        decode_image(b"%PDF-1.7 definitely not a portrait")
+
+
+def test_decode_image_rejects_a_truncated_jpeg():
+    payload = cv2.imencode(".jpg", np.full((64, 64, 3), 128, np.uint8))[1].tobytes()
+    with pytest.raises(UnreadableImageError):
+        decode_image(payload[: len(payload) // 3])
+
+
+def test_decode_image_refuses_a_huge_canvas_before_decoding_it(monkeypatch):
+    import src.imaging as imaging
+
+    monkeypatch.setattr(imaging, "MAX_DECODED_PIXELS", 64 * 64 - 1)
+    with pytest.raises(ImageTooLargeError, match="megapixels"):
+        decode_image(encode_png(np.zeros((64, 64, 3), np.uint8)))
 
 
 def test_decode_image_converts_greyscale_to_rgb():

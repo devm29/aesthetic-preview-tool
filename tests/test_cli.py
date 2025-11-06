@@ -50,6 +50,13 @@ def test_missing_file_exits_with_a_usage_error(tmp_path, capsys):
     assert "No such image" in capsys.readouterr().err
 
 
+def test_a_file_that_is_not_an_image_exits_with_a_usage_error(tmp_path, capsys):
+    notes = tmp_path / "notes.jpg"
+    notes.write_text("not an image")
+    assert cli.main([str(notes)]) == 2
+    assert "could not be read as an image" in capsys.readouterr().err
+
+
 def test_a_faceless_image_exits_nonzero_and_says_so(tmp_path, capsys):
     blank = tmp_path / "blank.png"
     blank.write_bytes(encode_png(np.zeros((300, 300, 3), np.uint8)))

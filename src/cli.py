@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .config import DISCLAIMER, get_settings
 from .generative import build_editor
-from .imaging import encode_png
+from .imaging import ImageTooLargeError, UnreadableImageError, encode_png
 from .pipeline import (
     analyse,
     build_export,
@@ -66,7 +66,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"No such image: {args.image}", file=sys.stderr)
         return 2
 
-    image = load_preview_image(args.image.read_bytes(), settings)
+    try:
+        image = load_preview_image(args.image.read_bytes(), settings)
+    except (ImageTooLargeError, UnreadableImageError) as exc:
+        print(f"{args.image}: {exc}", file=sys.stderr)
+        return 2
     report = analyse(image, settings)
 
     lines: list[str] = [f"Image      : {args.image} ({image.shape[1]}x{image.shape[0]})"]

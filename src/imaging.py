@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 import cv2
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, UnidentifiedImageError
 from skimage.transform import PiecewiseAffineTransform, warp
 
 logger = logging.getLogger(__name__)
@@ -22,8 +22,17 @@ logger = logging.getLogger(__name__)
 BBox = tuple[int, int, int, int]
 
 
+# A 12 MB PNG can still declare a 20k x 20k canvas. Decoding that would allocate
+# over a gigabyte before downscale ever runs, so the header is checked first.
+MAX_DECODED_PIXELS = 40_000_000
+
+
 class ImageTooLargeError(ValueError):
     """Raised when an upload exceeds the configured size budget."""
+
+
+class UnreadableImageError(ValueError):
+    """Raised when the bytes are not an image Pillow can decode."""
 
 
 def decode_image(data: bytes, max_bytes: int | None = None) -> np.ndarray:
@@ -32,10 +41,21 @@ def decode_image(data: bytes, max_bytes: int | None = None) -> np.ndarray:
         raise ImageTooLargeError(
             f"Image is {len(data) / 1e6:.1f} MB; the limit is {max_bytes / 1e6:.1f} MB."
         )
-    with Image.open(io.BytesIO(data)) as img:
-        with contextlib.suppress(Exception):  # malformed EXIF is not fatal
-            img = ImageOps.exif_transpose(img)
-        return np.asarray(img.convert("RGB"))
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            width, height = img.size
+            if width * height > MAX_DECODED_PIXELS:
+                raise ImageTooLargeError(
+                    f"Image is {width}x{height} pixels; the limit is "
+                    f"{MAX_DECODED_PIXELS / 1e6:.0f} megapixels."
+                )
+            with contextlib.suppress(Exception):  # malformed EXIF is not fatal
+                img = ImageOps.exif_transpose(img)
+            return np.asarray(img.convert("RGB"))
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError) as exc:
+        raise UnreadableImageError(
+            "This file could not be read as an image. Upload a JPEG or PNG."
+        ) from exc
 
 
 def encode_png(image_rgb: np.ndarray) -> bytes:
