@@ -1,0 +1,11 @@
+[server]
+headless = true
+# Uploads above DERMA_MAX_UPLOAD_MB are rejected by imaging.decode_image with a
+# readable message; this is only the transport ceiling in front of it.
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
