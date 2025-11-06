@@ -26,26 +26,39 @@ generated face … Not a real person"*, and no test touches a real photograph.
 
 ## What the screens look like
 
-**Controls, and a report where every check answers for itself** — one the detector cannot
-measure says so rather than quietly passing.
+All of these come from the Docker image (`docker compose up --build`), which ships no
+optional ML packages: Haar detection only, so the landmark procedures are disabled *with
+the reason shown* and head tilt reads "Not measured".
 
-![Treatment controls and the photo-quality report](docs/screenshots/01-overview.png)
+**Photo quality, then controls.** Every check names its own verdict in words, so a check
+the detector cannot measure says so rather than quietly passing.
 
-**Before and after** — the original is never off screen, each treatment is itemised with
-its engine and cost, and a [wipe mode](docs/screenshots/03-wipe-compare.png) is the
+![Photo-quality report and treatment controls](docs/screenshots/01-overview.png)
+
+**Before and after.** The original is never off screen, each treatment is itemised with
+its engine and cost, and a [wipe view](docs/screenshots/03-wipe-compare.png) is the
 alternative.
 
 ![Side-by-side comparison, identity signal and applied treatments](docs/screenshots/02-compare-and-identity.png)
 
-**Consultation notes** — what the edit did and what the identity number does not mean, by
-Claude when `ANTHROPIC_API_KEY` is set, otherwise the offline template shown here.
+**Consultation notes.** What the edit did and what the identity number does not mean,
+written by Claude when the narrator is installed and a key is set, otherwise by the
+offline template shown here. Notes belong to one edit: move a slider and they are hidden
+until you ask again.
 
-![Consultation notes generated from the offline template](docs/screenshots/04-consultation-notes.png)
+![Consultation notes from the offline template](docs/screenshots/04-consultation-notes.png)
 
-**The Docker image, which ships no optional ML dependencies.** Haar detection, landmark
-procedures disabled *with the reason shown*, head tilt "Not measured".
+**A file that is not an image** gets a sentence, not a stack trace; so does an upload over
+the size or pixel limit.
 
-![The app running with no optional ML dependencies installed](docs/screenshots/05-no-ml-deps-fallback.png)
+![Error shown for an unreadable upload](docs/screenshots/05-unreadable-upload.png)
+
+**On a phone** (390 px wide) the sidebar starts collapsed and the panels stack.
+
+<p>
+  <img src="docs/screenshots/06-mobile-overview.png" alt="Quality checks on a 390 px wide screen" width="260">
+  <img src="docs/screenshots/07-mobile-compare.png" alt="Before and after on a 390 px wide screen" width="260">
+</p>
 
 ## From upload to preview
 
@@ -92,11 +105,11 @@ stateDiagram-v2
     Rendering --> [*]
 ```
 
-Most thresholds live in `QCThresholds` (`src/config.py`): Laplacian variance ≥ 100 at a fixed
-512 px width so the score is size-stable, mean brightness 90–200, contrast ≥ 25, ≤ 15 %
-clipped highlights or shadows, roll within ±20°. The minimum face coverage (4 % of frame) is
-still a constant in `src/qc.py`. All are heuristics tuned on the synthetic sample, which is
-why the ones in `QCThresholds` are configurable.
+Every threshold lives in `QCThresholds` (`src/config.py`): face coverage ≥ 4 % of the
+frame, Laplacian variance ≥ 100 at a fixed 512 px width so the score is size-stable, mean
+brightness 90–200, contrast ≥ 25, ≤ 15 % clipped highlights or shadows, roll within ±20°.
+They are heuristics tuned on the synthetic sample, which is why they are configurable
+rather than scattered through `src/qc.py`.
 
 ## The identity signal, and what it is not
 
@@ -126,19 +139,28 @@ docker compose down -v
 It boots with the synthetic portrait already loaded, so there is nothing to upload first.
 The image ships the **lightweight path**: `python:3.12-slim`, multi-stage, non-root
 (`derma`, uid 10001), read-only root filesystem with tmpfs mounts, `no-new-privileges`,
-healthchecked on `/_stcore/health`. The recorded build is **274 MB** and booted `healthy`
-on `8200 -> 8501`, with `mediapipe`, `torch` and `diffusers` confirmed absent inside the
-container and `available_detectors()` returning `['haar']` — so "works with no ML
-dependencies" is the path actually built and booted, and screenshot 5 is that container.
+healthchecked on `/_stcore/health`. The current build is about 296 MB compressed
+(1.27 GB unpacked, most of it OpenCV, SciPy and PyArrow). Inside it `mediapipe`, `torch`,
+`diffusers` and `anthropic` are absent and `available_detectors()` returns `['haar']`,
+so "works with no ML dependencies" is the path actually built and booted.
 
-Locally, plus the two optional extras the app detects at runtime and names in the sidebar:
+To let Claude write the consultation notes, build with the narrator SDK and pass a key
+(copy `.env.example` to `.env` and fill in the last two lines, or export them):
+
+```bash
+DERMA_WITH_NARRATOR=true ANTHROPIC_API_KEY=... docker compose up --build
+```
+
+Locally, on Python 3.12 (`.python-version`), plus the optional extras the app detects at
+runtime and names in the sidebar:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt && streamlit run app.py
+pip install -r requirements.txt && streamlit run app.py   # http://localhost:8501
 
 pip install -r requirements-landmarks.txt  # MediaPipe FaceMesh -> lip and under-eye previews
 pip install -r requirements-ml.txt         # SDXL inpainting; also set DERMA_ENABLE_GENERATIVE=true
+pip install -r requirements-narrator.txt   # Claude-written notes; also set ANTHROPIC_API_KEY
 ```
 
 ## The same pipeline, without a browser
@@ -165,12 +187,33 @@ This is a proof of concept, not a medical device. Previews are illustrative imag
 ```
 
 `--out preview.png` writes the before/after pair, `--json` prints the structure the UI
-downloads and the narrator reads, and `--force` renders past failed checks.
+downloads and the narrator reads, and `--force` renders past failed checks. A missing or
+unreadable file exits with status 2 and a one-line reason; a photo with no face, or one
+that fails a check without `--force`, exits with 1.
+
+The start of the `--json` output for the same run:
+
+```json
+{
+  "disclaimer": "This is a proof of concept, not a medical device. ...",
+  "detector": "haar",
+  "landmarks": false,
+  "quality_checks": [
+    {"name": "Face detected", "status": "pass", "value": null, "detail": "One face located by the haar detector."},
+    {"name": "Face size", "status": "pass", "value": 30.91244167751736, "detail": "Face fills enough of the frame."},
+    ...
+    {"name": "Head tilt", "status": "skipped", "value": null, "detail": "The haar detector does not provide landmarks, so head tilt could not be measured."}
+  ],
+  "treatments": [{"key": "wrinkle", "label": "Wrinkle smoothing", "intensity": 55, "engine": "parametric", ...}, ...],
+  "identity": {"ssim": 0.979, "threshold": 0.8, "within_threshold": true, "verdict": "Barely changed"},
+  ...
+}
+```
 
 ## Settings
 
 `src/config.py` resolves these once at startup and is the only place the app reads its own
-settings from `os.environ`; the one other reader is `src/narrative.py`, which checks whether
+settings from `os.environ` (`.env.example` lists them all); the one other reader is `src/narrative.py`, which checks whether
 an Anthropic credential is present before attempting a call.
 
 | Variable | Default | What it does |
@@ -181,7 +224,8 @@ an Anthropic credential is present before attempting a call.
 | `DERMA_FACE_DETECTOR` | `auto` | `auto`, `mediapipe` or `haar`; an unavailable preference falls back with a warning. |
 | `DERMA_ENABLE_GENERATIVE` | `false` | Enables SDXL inpainting. Needs `requirements-ml.txt`; without it the UI says so and uses the parametric engines. |
 | `DERMA_NARRATOR_ENABLED` | `true` | Allows Claude-written consultation notes. Off means the fixed template is always used. |
-| `ANTHROPIC_API_KEY` | — | **Unset is a supported state**: the notes come from the deterministic template instead. |
+| `ANTHROPIC_API_KEY` | — | **Unset is a supported state**: the notes come from the deterministic template instead. Also needs `requirements-narrator.txt`. |
+| `DERMA_WITH_NARRATOR` | `false` | Compose build argument, not read by the app: `true` installs the narrator SDK into the image. |
 
 Also read: `DERMA_EXPORT_MAX_SIDE` (`2048`), `DERMA_NARRATOR_MODEL` (`claude-opus-5`), `DERMA_LOG_LEVEL` (`INFO`), `DERMA_SDXL_MODEL_ID`, `DERMA_SDXL_MAX_SIDE` (`768`).
 
@@ -221,7 +265,7 @@ one class plus `register_detector`.
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                                  # 201 tests across 11 files
+pytest                                  # 210 tests across 12 files
 ruff check . && ruff format --check .
 ```
 
@@ -229,7 +273,9 @@ No test downloads a model, needs a GPU, makes a network call or touches a real p
 `tests/conftest.py` supplies a synthetic FaceMesh landmark array and a recording generative
 editor, `tests/test_narrative.py` installs a fake `anthropic` module, `tests/test_generative.py`
 substitutes the SDXL pipeline, and the suite passes with none of MediaPipe, torch or `anthropic`
-installed.
+installed. `tests/test_app.py` drives the Streamlit page itself through `streamlit.testing`:
+it boots on the sample, checks the landmark sliders are disabled on a Haar face, and moves a
+slider after writing notes to prove the stale notes disappear.
 
 Streamlit re-runs the whole script on every slider nudge, so decode, detection and the skin
 mask are cached on a SHA-256 fingerprint of the pixels, and `imaging.masked_filter` crops to
