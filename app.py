@@ -8,6 +8,7 @@ what makes the pipeline testable without a browser.
 from __future__ import annotations
 
 import json
+from html import escape
 
 import numpy as np
 import streamlit as st
@@ -39,46 +40,73 @@ from src.treatments import ADJUSTMENT, PROCEDURE
 SETTINGS = get_settings()
 
 st.set_page_config(
-    page_title="Aesthetic Preview POC",
+    page_title="Aesthetic Preview",
     page_icon="◐",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
+# Linen, ink and clay: a consulting-room palette rather than a dashboard one.
+# Fraunces / Public Sans / IBM Plex Mono are loaded by .streamlit/config.toml;
+# the stacks fall back to system fonts when offline.
 STYLE = """
 <style>
-:root { --ink:#1d2430; --muted:#5d6b7f; --line:#e3e8ef; --accent:#3f6d8e; }
-.block-container { padding-top: 1.6rem; padding-bottom: 2rem; max-width: 1360px; }
-h1, h2, h3 { color: var(--ink); letter-spacing: -0.01em; }
-.hero { display:flex; align-items:baseline; gap:.75rem; flex-wrap:wrap; margin-bottom:.15rem; }
-.hero h1 { font-size:1.85rem; margin:0; }
-.tag { font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
-       padding:.22rem .55rem; border-radius:999px; background:#eef3f8; color:var(--accent);
-       border:1px solid #d5e2ed; }
-.lede { color:var(--muted); font-size:.95rem; margin:.1rem 0 .8rem; max-width:78ch; }
-.notice { border:1px solid #e7d9b8; background:#fdf8ec; color:#6b5726; border-radius:10px;
-          padding:.65rem .9rem; font-size:.85rem; line-height:1.5; margin-bottom:.9rem; }
-.qc-grid { display:flex; gap:.6rem; flex-wrap:wrap; margin:.2rem 0 .9rem; }
-.qc { flex:1 1 170px; border:1px solid var(--line); border-radius:10px; padding:.6rem .75rem;
-      background:#fff; }
-.qc .name { font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
-.qc .val { font-size:1.15rem; font-weight:650; color:var(--ink); margin-top:.1rem; }
-.qc .det { font-size:.74rem; color:var(--muted); margin-top:.25rem; line-height:1.35; }
-.qc.pass { border-left:3px solid #3f8e63; }
-.qc.fail { border-left:3px solid #b5523f; }
-.qc.skipped { border-left:3px solid #9aa6b5; }
-.panel { border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; background:#fff; }
-.panel h4 { margin:0 0 .35rem; font-size:.95rem; color:var(--ink); }
-.panel p { margin:0; font-size:.82rem; color:var(--muted); line-height:1.55; }
-.score { font-size:2.1rem; font-weight:680; color:var(--ink); line-height:1.1; }
-.score small { font-size:.8rem; font-weight:500; color:var(--muted); }
-.footer { color:var(--muted); font-size:.78rem; border-top:1px solid var(--line);
+:root {
+  --ink:#23201c; --muted:#5b544c; --line:#e2dad0; --surface:#ffffff; --wash:#f3eee7;
+  --clay:#94452b; --pass:#2d6a4c; --fail:#a1372a; --skip:#6a645c;
+  --serif:"Fraunces", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.block-container { padding-top:1.4rem; padding-bottom:2rem; max-width:1320px; }
+h1, h2, h3, h4 { color:var(--ink); }
+.masthead { display:flex; align-items:baseline; gap:.5rem 1rem; flex-wrap:wrap;
+            border-bottom:1px solid var(--line); padding-bottom:.7rem; margin-bottom:.8rem; }
+.masthead h1 { font-family:var(--serif); font-weight:600; font-size:2rem; margin:0; padding:0;
+               letter-spacing:-.015em; }
+.masthead .kicker { font-size:.72rem; font-weight:600; letter-spacing:.12em;
+                    text-transform:uppercase; color:var(--clay); }
+.lede { color:var(--muted); font-size:.98rem; margin:0 0 .9rem; max-width:72ch; line-height:1.55; }
+.notice { border-left:3px solid var(--clay); background:var(--wash); color:var(--ink);
+          border-radius:0 8px 8px 0; padding:.65rem .95rem; font-size:.86rem; line-height:1.55;
+          margin-bottom:1.1rem; }
+.section-title { font-family:var(--serif); font-weight:600; font-size:1.4rem !important;
+                 margin:1.6rem 0 .7rem !important; padding:0 !important; color:var(--ink); }
+.qc-grid { list-style:none; padding:0 !important; margin:0 0 1rem !important; display:grid;
+           gap:.6rem; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); }
+.qc { border:1px solid var(--line); border-radius:8px; padding:.65rem .8rem;
+      background:var(--surface); margin:0 !important; }
+.qc .head { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+.qc .name { font-size:.78rem; font-weight:600; color:var(--ink); }
+.qc .status { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+              padding:.1rem .45rem; border-radius:4px; white-space:nowrap; }
+.qc.pass .status { color:var(--pass); background:#e6f0ea; }
+.qc.fail .status { color:var(--fail); background:#f7e4e0; }
+.qc.skipped .status { color:var(--skip); background:#ece8e2; }
+.qc.fail { border-color:#d9a79e; }
+.qc .val { font-family:var(--mono); font-size:1.1rem; color:var(--ink); margin-top:.3rem; }
+.qc .val small { font-family:inherit; font-size:.72rem; color:var(--muted); }
+.qc .det { font-size:.78rem; color:var(--muted); margin-top:.2rem; line-height:1.4; }
+.panel { border:1px solid var(--line); border-radius:8px; padding:.95rem 1.1rem;
+         background:var(--surface); height:100%; }
+.panel h3 { font-family:var(--serif); font-weight:600; margin:0 0 .4rem; padding:0;
+            font-size:1.02rem; }
+.panel p, .panel li { margin:0; font-size:.85rem; color:var(--muted); line-height:1.55; }
+.panel ul { margin:0; padding-left:1.1rem; }
+.panel .explain { margin-top:.7rem; padding-top:.6rem; border-top:1px dashed var(--line); }
+.score { font-family:var(--mono); font-size:2rem; color:var(--ink); line-height:1.1; }
+.score small { font-size:.78rem; color:var(--muted); }
+.verdict { margin-top:.35rem; font-weight:600; color:var(--ink) !important; }
+.footer { color:var(--muted); font-size:.8rem; border-top:1px solid var(--line);
           margin-top:2rem; padding-top:.9rem; line-height:1.6; }
 [data-testid="stSidebar"] { border-right:1px solid var(--line); }
-h4 { margin-top:1.1rem !important; margin-bottom:.35rem !important; }
-[data-testid="stSlider"] { padding-bottom:0; }
-[data-testid="stSlider"] + [data-testid="stCaptionContainer"] { margin-top:-.35rem; }
-[data-testid="stImageCaption"] { color:var(--muted); font-size:.78rem; }
+[data-testid="stImageCaption"] { color:var(--muted); font-size:.8rem; }
+:focus-visible { outline:2px solid var(--clay) !important; outline-offset:2px; }
+@media (max-width: 640px) {
+  .block-container { padding-left:1rem; padding-right:1rem; padding-top:3.6rem; }
+  .masthead h1 { font-size:1.6rem; }
+  .qc-grid { grid-template-columns:1fr 1fr; }
+  .score { font-size:1.7rem; }
+}
 </style>
 """
 st.markdown(STYLE, unsafe_allow_html=True)
@@ -123,7 +151,7 @@ def cached_preview(fingerprint: str, intensities: tuple[tuple[str, int], ...], _
 
 # --------------------------------------------------------------------------- sidebar
 with st.sidebar:
-    st.markdown("### Photo")
+    st.subheader("Photo")
     upload = st.file_uploader("Upload a portrait", type=["jpg", "jpeg", "png"])
     use_sample = st.toggle(
         "Use the synthetic sample",
@@ -133,14 +161,14 @@ with st.sidebar:
     st.caption(f"Uploads are processed in memory only. Limit {SETTINGS.max_upload_mb} MB.")
 
     st.divider()
-    st.markdown("### Engine")
+    st.subheader("Engine")
     detectors = available_detectors()
     st.caption("Face detector: " + (", ".join(detectors) if detectors else "none available"))
     editor = cached_editor()
     if editor.available():
         st.caption(f"Generative engine: {editor.name}")
     else:
-        st.caption("Generative engine: off - " + editor.unavailable_reason())
+        st.caption("Generative engine: off. " + editor.unavailable_reason())
     st.caption("Narrator: Claude" if narrator_available(SETTINGS) else "Narrator: offline template")
 
     st.divider()
@@ -149,20 +177,17 @@ with st.sidebar:
 
 # --------------------------------------------------------------------------- header
 st.markdown(
-    '<div class="hero"><h1>Aesthetic Preview</h1>'
-    '<span class="tag">Proof of concept</span>'
-    '<span class="tag">Local &amp; CPU only</span></div>',
+    '<header class="masthead"><h1>Aesthetic Preview</h1>'
+    '<span class="kicker">Proof of concept &middot; runs locally on CPU</span></header>'
+    '<p class="lede">See what common non-invasive cosmetic adjustments would look like as '
+    "an image edit, with the original photo always beside the result.</p>"
+    f'<aside class="notice" role="note"><b>Read this first.</b> {escape(DISCLAIMER)}</aside>',
     unsafe_allow_html=True,
 )
-st.markdown(
-    '<p class="lede">Preview what common non-invasive cosmetic adjustments would look '
-    "like as an image edit, with the original always shown beside the result.</p>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    f'<div class="notice"><b>Read this first.</b> {DISCLAIMER}</div>',
-    unsafe_allow_html=True,
-)
+
+
+def section(title: str) -> None:
+    st.markdown(f'<h2 class="section-title">{escape(title)}</h2>', unsafe_allow_html=True)
 
 
 def _load_source() -> bytes:
@@ -185,33 +210,41 @@ fingerprint = image_fingerprint(image)
 report = cached_report(fingerprint, image)
 
 # --------------------------------------------------------------------------- QC
+# The status is spelled out on every card, so colour is never the only signal.
 STATUS_WORD = {"pass": "Pass", "fail": "Fail", "skipped": "Not measured"}
 
-st.markdown("#### Photo quality")
+section("Photo quality")
 cards = []
 for check in report.checks:
-    # A check with no number still needs a headline, or the card reads as broken.
     if check.value is None:
-        value, unit = STATUS_WORD[check.status], ""
+        reading = ""
     else:
-        value = f"{check.value:.1f}"
-        unit = f' <small style="color:#5d6b7f">{check.unit}</small>' if check.unit else ""
+        unit = f" <small>{escape(check.unit)}</small>" if check.unit else ""
+        reading = f'<div class="val">{check.value:.1f}{unit}</div>'
     cards.append(
-        f'<div class="qc {check.status}"><div class="name">{check.name}</div>'
-        f'<div class="val">{value}{unit}</div>'
-        f'<div class="det">{check.detail}</div></div>'
+        f'<li class="qc {check.status}"><div class="head">'
+        f'<span class="name">{escape(check.name)}</span>'
+        f'<span class="status">{STATUS_WORD[check.status]}</span></div>'
+        f'{reading}<div class="det">{escape(check.detail)}</div></li>'
     )
-st.markdown(f'<div class="qc-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+st.markdown(
+    f'<ul class="qc-grid" aria-label="Photo quality checks">{"".join(cards)}</ul>',
+    unsafe_allow_html=True,
+)
 
 if report.face is None:
-    st.image(image, caption="Uploaded photo", width=420)
+    st.error(
+        "No face was found, so nothing can be previewed. Use a frontal photo with the "
+        "face well lit and filling a good part of the frame."
+    )
+    st.image(image, caption="The photo as uploaded", width=420)
     st.stop()
 if report.failures and not force:
     st.warning(
         "Some checks failed. Retake the photo, or tick "
         "**Render even if checks fail** in the sidebar to continue anyway."
     )
-    st.image(image, caption="Uploaded photo", width=420)
+    st.image(image, caption="The photo as uploaded", width=420)
     st.stop()
 
 # --------------------------------------------------------------------------- controls
@@ -223,7 +256,7 @@ context_probe = TreatmentContext(
     editor=cached_editor(),
 )
 
-st.markdown("#### Treatments")
+section("Treatments")
 intensities: dict[str, int] = {}
 for group, heading in ((ADJUSTMENT, "Skin adjustments"), (PROCEDURE, "Procedure previews")):
     rows = treatment_availability(context_probe, group)
@@ -246,28 +279,37 @@ for group, heading in ((ADJUSTMENT, "Skin adjustments"), (PROCEDURE, "Procedure 
             if usable:
                 st.caption(f"{treatment.engine(context_probe)} engine")
             else:
-                st.caption(f"Unavailable - {reason.split('.')[0].lower()}")
+                st.caption(f"Unavailable: {reason.split('.')[0].lower()}")
 
-preview = cached_preview(fingerprint, tuple(sorted(intensities.items())), image, report)
+with st.spinner("Rendering the preview..."):
+    preview = cached_preview(fingerprint, tuple(sorted(intensities.items())), image, report)
 
 # --------------------------------------------------------------------------- compare
-st.markdown("#### Before and after")
-mode = st.segmented_control(
-    "Comparison", ["Side by side", "Wipe"], default="Side by side", label_visibility="collapsed"
-)
+section("Before and after")
+mode = st.segmented_control("Comparison view", ["Side by side", "Wipe"], default="Side by side")
 if mode == "Wipe":
-    position = st.slider("Wipe position", 0.0, 1.0, 0.5, 0.01, label_visibility="collapsed")
-    st.image(
-        wipe_composite(preview.original, preview.edited, position),
-        caption="Left of the line is the original photo; right is the preview.",
-        width="stretch",
+    position = st.slider(
+        "Wipe position",
+        0.0,
+        1.0,
+        0.5,
+        0.01,
+        help="0 shows only the preview, 1 only the original.",
     )
+    # One image at full width would be twice the size of each side-by-side pane.
+    _, wipe_col, _ = st.columns([1, 3, 1])
+    with wipe_col:
+        st.image(
+            wipe_composite(preview.original, preview.edited, position),
+            caption="Left of the line is the original photo; right is the preview.",
+            width="stretch",
+        )
 else:
     left, right = st.columns(2)
     with left:
-        st.image(preview.original, caption="Original", width="stretch")
+        st.image(preview.original, caption="Original photo", width="stretch")
     with right:
-        st.image(preview.edited, caption="Preview (edited)", width="stretch")
+        st.image(preview.edited, caption="Preview, edited", width="stretch")
 
 # --------------------------------------------------------------------------- signals
 identity = preview.identity
@@ -275,10 +317,10 @@ signal_col, detail_col = st.columns([1, 2])
 with signal_col:
     if identity is not None:
         st.markdown(
-            f'<div class="panel"><h4>Identity signal</h4>'
+            f'<section class="panel" aria-label="Identity signal"><h3>Identity signal</h3>'
             f'<div class="score">{identity.ssim:.3f} '
-            f"<small>/ threshold {identity.threshold:.2f}</small></div>"
-            f'<p style="margin-top:.35rem">{identity.verdict}.</p></div>',
+            f"<small>SSIM, threshold {identity.threshold:.2f}</small></div>"
+            f'<p class="verdict">{escape(identity.verdict)}.</p></section>',
             unsafe_allow_html=True,
         )
         if not identity.within_threshold:
@@ -287,16 +329,18 @@ with signal_col:
                 "the original carefully before reading anything into it."
             )
 with detail_col:
-    applied = (
-        "<br>".join(
-            f"&bull; {a.label} at {a.intensity}% ({a.engine}, {a.elapsed_ms:.0f} ms)"
+    if preview.applied:
+        items = "".join(
+            f"<li>{escape(a.label)} at {a.intensity}% "
+            f"({escape(a.engine)}, {a.elapsed_ms:.0f} ms)</li>"
             for a in preview.applied
         )
-        or "&bull; Nothing applied yet - move a slider."
-    )
+        applied = f"<ul>{items}</ul>"
+    else:
+        applied = "<p>Nothing applied yet. Move a slider above to see an edit.</p>"
     st.markdown(
-        f'<div class="panel"><h4>What was applied</h4><p>{applied}</p>'
-        f'<p style="margin-top:.6rem">{IDENTITY_EXPLANATION}</p></div>',
+        f'<section class="panel" aria-label="What was applied"><h3>What was applied</h3>'
+        f'{applied}<p class="explain">{escape(IDENTITY_EXPLANATION)}</p></section>',
         unsafe_allow_html=True,
     )
 
@@ -322,7 +366,7 @@ with st.expander("Consultation notes", expanded=False):
     if narrative is not None:
         st.markdown(narrative.text)
         st.caption(
-            f"Source: {narrative.source}" + (f" - {narrative.detail}" if narrative.detail else "")
+            f"Source: {narrative.source}." + (f" {narrative.detail}" if narrative.detail else "")
         )
 
 export_col, json_col, _ = st.columns([1, 1, 2])
@@ -345,7 +389,7 @@ with json_col:
     )
 
 st.markdown(
-    f'<div class="footer">{DISCLAIMER} Nothing here is medical advice, and no image '
-    "leaves this machine: detection, editing and scoring all run locally on CPU.</div>",
+    f'<footer class="footer">{escape(DISCLAIMER)} Nothing here is medical advice, and no '
+    "image leaves this machine: detection, editing and scoring all run locally on CPU.</footer>",
     unsafe_allow_html=True,
 )

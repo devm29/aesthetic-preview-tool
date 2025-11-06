@@ -77,8 +77,8 @@ def _template(summary: dict[str, object]) -> str:
             for t in treatments  # type: ignore[index]
         )
         first = (
-            f"This preview applied {described}. Those are image edits - filters and "
-            "geometric warps over the detected face region - not a simulation of any "
+            f"This preview applied {described}. Those are image edits (filters and "
+            "geometric warps over the detected face region), not a simulation of any "
             "biological process."
         )
     else:
@@ -91,7 +91,7 @@ def _template(summary: dict[str, object]) -> str:
     if identity:
         second = (
             f"The identity signal (SSIM) reads {identity['ssim']:.3f} against a "  # type: ignore[index]
-            f"threshold of {identity['threshold']:.2f} - {identity['verdict'].lower()}. "  # type: ignore[index]
+            f"threshold of {identity['threshold']:.2f}: {identity['verdict'].lower()}. "  # type: ignore[index]
             "That measures how much image structure changed; it is not an identity "
             "match and it says nothing about whether the edit is realistic."
         )
