@@ -151,17 +151,18 @@ def piecewise_warp(image_rgb: np.ndarray, src: np.ndarray, dst: np.ndarray) -> n
     runs backwards and a "make bigger" edit visibly shrinks the region.
 
     Returns ``None`` when the point set cannot be triangulated (collinear or
-    coincident points). ``estimate`` raises ``QhullError`` from SciPy in that
-    case rather than returning ``False``, so both outcomes are handled here and
-    callers only ever have to check for ``None``.
+    coincident points). ``from_estimate`` can either return a falsy
+    ``FailedEstimation`` or let SciPy's ``QhullError`` escape, so both outcomes
+    are handled here and callers only ever have to check for ``None``.
     """
-    transform = PiecewiseAffineTransform()
     try:
-        estimated = transform.estimate(np.asarray(src, np.float32), np.asarray(dst, np.float32))
+        transform = PiecewiseAffineTransform.from_estimate(
+            np.asarray(src, np.float32), np.asarray(dst, np.float32)
+        )
     except Exception:
         logger.debug("Piecewise-affine estimation failed on a degenerate point set.")
         return None
-    if not estimated:
+    if not transform:
         return None
     warped = warp(
         image_rgb,

@@ -194,13 +194,20 @@ grows a per-treatment branch:
 ```python
 from src.treatments import ADJUSTMENT, Treatment, TreatmentSpec, register
 
+
 @register
 class Sepia(Treatment):
-    spec = TreatmentSpec(key="sepia", label="Sepia", summary="Warms the skin region.",
-                         group=ADJUSTMENT, order=5, default=0)
+    spec = TreatmentSpec(
+        key="sepia",
+        label="Sepia",
+        summary="Warms the skin region.",
+        group=ADJUSTMENT,
+        order=5,
+        default=0,
+    )
 
     def apply(self, image_rgb, context, intensity):
-        ...  # must be a no-op at intensity 0
+        return image_rgb  # must be a no-op at intensity 0
 ```
 
 Import it in `src/treatments/__init__.py` and it becomes a slider, a `--sepia` flag, a row
