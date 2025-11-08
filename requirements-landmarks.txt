@@ -1,0 +1,8 @@
+# Optional: MediaPipe FaceMesh (468 landmarks), which unlocks the lip and
+# under-eye procedure previews and the head-tilt quality check.
+#
+# The app uses the legacy `mediapipe.solutions.face_mesh` API. MediaPipe 0.10.30
+# and later drop `solutions` on some platforms and ship only `mediapipe.tasks`,
+# so the range is capped. With no usable build installed the app falls back to
+# the OpenCV Haar cascade (bounding box only) and says so in the UI.
+mediapipe>=0.10.13,<0.10.30
