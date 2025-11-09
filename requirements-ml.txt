@@ -1,0 +1,12 @@
+# Optional: generative (SDXL inpainting) editing.
+#
+# Large download, slow on CPU. The app runs without this file installed; the
+# generative engine simply reports itself unavailable and the parametric
+# engines are used instead. Also requires DERMA_ENABLE_GENERATIVE=true.
+#
+# On Apple Silicon torch uses MPS; on Linux/CUDA it uses the GPU if present.
+torch>=2.3,<3
+diffusers>=0.30,<1
+transformers>=4.44,<5
+accelerate>=0.33,<2
+safetensors>=0.4,<1
