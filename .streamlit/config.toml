@@ -1,0 +1,21 @@
+# Committed on purpose: the palette is part of the UI, and the default
+# Streamlit red fights the blue accent used throughout app.py.
+
+[theme]
+base = "light"
+primaryColor = "#3f6d8e"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f8fb"
+textColor = "#1d2430"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = true
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+maxUploadSize = 12
