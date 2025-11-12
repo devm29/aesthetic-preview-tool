@@ -1,0 +1,43 @@
+# One command, no manual steps:
+#
+#   docker compose up --build
+#   open http://localhost:8200
+#
+# The app boots with the synthetic sample portrait already loaded, so there is
+# no empty first screen and nothing to upload before you can see it work.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: derma-scan:local
+    container_name: derma-scan
+    ports:
+      - "8200:8501"
+    environment:
+      # See the Configuration table in README.md for every variable.
+      DERMA_PREVIEW_MAX_SIDE: "1024"
+      DERMA_EXPORT_MAX_SIDE: "2048"
+      DERMA_MAX_UPLOAD_MB: "12"
+      DERMA_IDENTITY_MIN_SSIM: "0.80"
+      DERMA_FACE_DETECTOR: "auto"
+      # The generative engine needs requirements-ml.txt, which this image does
+      # not ship. Leaving it false keeps the UI honest about what is available.
+      DERMA_ENABLE_GENERATIVE: "false"
+      DERMA_LOG_LEVEL: "INFO"
+      # Consultation notes fall back to a fixed template when this is unset.
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/derma/.streamlit
+    security_opt:
+      - no-new-privileges:true
